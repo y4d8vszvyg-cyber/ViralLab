@@ -86,3 +86,9 @@ test('stripe webhook signature verification', () => {
   assert.equal(verifyWebhook(body, `t=${t},v1=${'0'.repeat(64)}`, secret), false);
   assert.equal(verifyWebhook(body, `t=${t - 10_000},v1=${sig}`, secret), false);
 });
+
+test('health check', async () => {
+  const r = await client()('/healthz');
+  assert.equal(r.status, 200);
+  assert.equal(r.body.ok, true);
+});

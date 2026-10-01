@@ -75,6 +75,51 @@ Für Umgebungsvariablen mit Node 20+: `node --env-file=.env server.js`
 2. Einen Webhook auf `https://<deine-domain>/api/billing/webhook` mit den Events `checkout.session.completed` und `customer.subscription.deleted` anlegen und das Secret als `STRIPE_WEBHOOK_SECRET` setzen.
 3. `PUBLIC_URL` auf die öffentliche URL setzen.
 
+## 🚀 Online stellen (Deployment)
+
+Die App ist ein einzelner Node-Server mit Dockerfile. Ein Volume speichert Nutzer, Kontingente und Pläne. Es eignet sich jeder Hoster, der Docker und ein persistentes Volume anbietet.
+
+### Option A: Render (am einfachsten)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/y4d8vszvyg-cyber/ViralLab)
+
+1. Klick auf den Button oder geh in Render auf **New → Blueprint** und wähle dieses Repo. Render liest `render.yaml` und legt Dienst, Disk und `SESSION_SECRET` automatisch an.
+2. Beim Anlegen trägst du ein:
+   - `ANTHROPIC_API_KEY` für Claude-generierte Pläne (leer lassen = Offline-Engine)
+   - `PUBLIC_URL`, z.B. `https://virallab.onrender.com`
+   - `STRIPE_SECRET_KEY` und `STRIPE_WEBHOOK_SECRET`, siehe unten
+3. Nach etwa 2 Minuten ist die App unter `https://<name>.onrender.com` erreichbar. Eine eigene Domain lässt sich unter **Settings → Custom Domains** hinzufügen.
+
+> Für die persistente Disk braucht Render den „Starter“-Plan (ca. 7 $/Monat). Auf dem Gratis-Plan gehen gespeicherte Daten bei jedem Neustart verloren.
+
+### Option B: Fly.io (Server in Frankfurt)
+
+```bash
+fly launch --copy-config --no-deploy
+fly volumes create virallab_data --size 1 --region fra
+fly secrets set SESSION_SECRET=$(openssl rand -hex 32) ANTHROPIC_API_KEY=sk-ant-... PUBLIC_URL=https://virallab.fly.dev
+fly deploy
+```
+
+### Option C: Railway oder ein eigener Server
+
+Das `Dockerfile` baut die Image. Mount ein Volume auf `/data` und setz `SESSION_SECRET` sowie optional die übrigen Variablen aus `.env.example`. Auf einem eigenen Server reicht:
+
+```bash
+docker build -t virallab .
+docker run -d -p 80:3000 -v virallab-data:/data -e SESSION_SECRET=$(openssl rand -hex 32) virallab
+```
+
+### Checkliste vor dem Livegang
+
+- [ ] `SESSION_SECRET` ist gesetzt. Ohne den Wert startet die App in Produktion absichtlich nicht.
+- [ ] `PUBLIC_URL` zeigt auf die echte Domain, sonst stimmen die Stripe-Weiterleitungen nicht.
+- [ ] Stripe ist eingerichtet. Ohne Stripe ist der Demo-Modus aktiv, und **jeder kann Pro gratis freischalten**. Alternativ `ALLOW_DEMO_UPGRADE=false` setzen.
+- [ ] Der Stripe-Webhook zeigt auf `https://<domain>/api/billing/webhook`.
+- [ ] Impressum und Datenschutzerklärung sind ergänzt (Pflicht in Deutschland).
+
+Der Health-Check läuft unter `GET /healthz`. CI (GitHub Actions) führt bei jedem Push die Tests und den Docker-Build aus.
+
 ## Tests
 
 ```bash

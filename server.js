@@ -23,9 +23,19 @@ const GenerateInput = z.object({
   seed: z.coerce.number().int().optional(),
 });
 
-export function createApp({ store = createStore(path.join(__dirname, 'data', 'db.json')), generate = generatePlan } = {}) {
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+
+export function createApp({ store = createStore(path.join(DATA_DIR, 'db.json')), generate = generatePlan } = {}) {
   const app = express();
   const secret = process.env.SESSION_SECRET || 'virallab-dev-secret';
+  if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+    throw new Error('SESSION_SECRET muss in Produktion gesetzt sein.');
+  }
+  // Behind a hosting proxy (Render, Railway, Fly): trust X-Forwarded-* for https URLs and secure cookies.
+  app.set('trust proxy', 1);
+  app.disable('x-powered-by');
+
+  app.get('/healthz', (req, res) => res.json({ ok: true }));
   const allowDemoUpgrade = !stripeEnabled() && process.env.ALLOW_DEMO_UPGRADE !== 'false';
   const inFlight = new Set();
 
