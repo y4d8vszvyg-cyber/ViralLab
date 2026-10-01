@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ViralLab – KI-Content-Pläne für TikTok, Reels & Shorts</title>
+  <meta name="description" content="Beschreibe dein Business – ViralLab erstellt Hooks, Skripte, Captions, Hashtags und einen kompletten Content-Kalender für TikTok, Instagram Reels und YouTube Shorts.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧪</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="logo" href="/"><span class="flask">🧪</span> Viral<span>Lab</span></a>
+    <nav>
+      <button class="link" data-open="history">Meine Pläne</button>
+      <button class="link" data-open="pricing">Preise</button>
+      <span id="quota" class="pill">…</span>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">KI-Content-Strategie für Kurzvideos</p>
+      <h1>Von <em>„Ich will mehr Verkäufe“</em><br>zum fertigen <span class="grad">Viral-Plan</span>.</h1>
+      <p class="sub">Hooks, Skripte, Captions, Hashtags und ein Content-Kalender – mit Varianten für TikTok, Reels und Shorts. Auf Basis dessen, was in deiner Nische wirklich funktioniert.</p>
+    </section>
+
+    <form id="gen" class="card form">
+      <label for="description" class="label">Was machst du – und was willst du erreichen?</label>
+      <textarea id="description" name="description" rows="3" maxlength="2000" required placeholder="Ich habe eine Modemarke und will mehr Verkäufe."></textarea>
+      <div class="examples">
+        <span>Beispiele:</span>
+        <button type="button" class="chip" data-example="Ich habe eine Modemarke für nachhaltige Streetwear und will mehr Verkäufe.">👕 Modemarke</button>
+        <button type="button" class="chip" data-example="Ich bin Personal Trainer in Berlin und will mehr Anfragen für mein Online-Coaching.">💪 Personal Trainer</button>
+        <button type="button" class="chip" data-example="Wir sind ein kleines Café in Hamburg und wollen mehr Reichweite bei Locals.">☕ Café</button>
+        <button type="button" class="chip" data-example="Ich biete Business-Coaching für Selbstständige an und will meine Marke stärken.">🎯 Coach</button>
+      </div>
+
+      <div class="grid">
+        <label>Markenname <small>(optional)</small><input name="brand" maxlength="60" placeholder="z.B. NORDWERK"></label>
+        <label>Ziel
+          <select name="goal">
+            <option value="">Automatisch erkennen</option>
+            <option value="sales">💸 Mehr Verkäufe</option>
+            <option value="leads">📩 Mehr Anfragen / Leads</option>
+            <option value="reach">🚀 Mehr Reichweite</option>
+            <option value="brand">💎 Stärkere Marke</option>
+          </select>
+        </label>
+        <label>Posts pro Woche
+          <select name="postsPerWeek">
+            <option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="7" selected>7 (täglich)</option>
+          </select>
+        </label>
+        <label>Zeitraum
+          <select name="weeks">
+            <option value="1" selected>1 Woche</option><option value="2">2 Wochen</option><option value="4">4 Wochen</option>
+          </select>
+        </label>
+        <label class="wide">Tonalität <small>(optional)</small><input name="tone" maxlength="80" placeholder="z.B. frech & direkt, edel, humorvoll"></label>
+      </div>
+
+      <details id="niche" class="niche">
+        <summary><span class="badge">Nischen-Lab</span> Erfolgreiche Videos deiner Nische analysieren <small>– ViralLab entwickelt daraus eigene Konzepte</small></summary>
+        <p class="hint">Eine Zeile pro Video: <code>Hook / Titel | Views | Likes | Kommentare | Shares | Dauer</code> – nur der Hook ist Pflicht. Zahlen wie <code>1,2M</code> oder <code>45k</code> funktionieren.</p>
+        <textarea name="nicheVideos" rows="6" placeholder="3 Fehler, die dein Outfit billig aussehen lassen | 2,1M | 180k | 3,2k | 12k | 0:24
+POV: Du findest die perfekte Jeans | 850k | 92k | 800 | 4k | 15
+Ich hätte nie gedacht, dass Leinen so edel aussieht | 1,4M | 120k | 2k | 9k | 31"></textarea>
+        <div class="row">
+          <button type="button" id="analyzeBtn" class="btn ghost">🔬 Muster analysieren</button>
+          <button type="button" id="sampleBtn" class="btn link">Beispieldaten einfügen</button>
+        </div>
+        <div id="analysis"></div>
+      </details>
+
+      <button class="btn primary big" id="genBtn" type="submit"><span>✨ Content-Plan erstellen</span></button>
+      <p id="formError" class="error" role="alert"></p>
+    </form>
+
+    <section id="loading" class="loading" hidden>
+      <div class="beaker"><div class="liquid"></div><i></i><i></i><i></i></div>
+      <p id="loadingText">Mische Hooks …</p>
+    </section>
+
+    <section id="result" hidden>
+      <div class="card summary">
+        <div class="summary-head">
+          <div>
+            <p class="eyebrow">Dein Content-Plan</p>
+            <h2 id="planTitle"></h2>
+          </div>
+          <div class="actions">
+            <button class="btn ghost" id="regenBtn">🔁 Neu würfeln</button>
+            <div class="dropdown">
+              <button class="btn ghost" id="exportBtn">⬇️ Export</button>
+              <div class="menu" id="exportMenu" hidden>
+                <button data-export="ics">📅 Kalender (.ics)</button>
+                <button data-export="md">📝 Markdown</button>
+                <button data-export="csv">📊 CSV / Sheets</button>
+                <button data-export="copy">📋 Alles kopieren</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p id="planSummary"></p>
+        <p class="muted" id="planAudience"></p>
+        <div id="pillars" class="pillars"></div>
+        <div id="planInsights"></div>
+      </div>
+
+      <div class="platforms" role="tablist" aria-label="Plattform">
+        <button class="tab active" data-platform="TikTok">TikTok</button>
+        <button class="tab" data-platform="Instagram Reels">Reels</button>
+        <button class="tab" data-platform="YouTube Shorts">Shorts</button>
+      </div>
+      <div id="calendar" class="calendar"></div>
+    </section>
+  </main>
+
+  <dialog id="postDialog" class="sheet">
+    <button class="close" data-close aria-label="Schließen">✕</button>
+    <div id="postDetail"></div>
+  </dialog>
+
+  <dialog id="pricingDialog" class="sheet narrow">
+    <button class="close" data-close aria-label="Schließen">✕</button>
+    <h2>Mehr virale Ideen. Weniger Rätselraten.</h2>
+    <div class="plans">
+      <div class="plan">
+        <h3>Free</h3>
+        <p class="price">0 €</p>
+        <ul><li><b id="freeCount">10</b> Generierungen</li><li>Komplette Content-Pläne</li><li>Nischen-Analyse</li><li>Export (.ics, Markdown, CSV)</li></ul>
+      </div>
+      <div class="plan pro">
+        <span class="ribbon">Beliebt</span>
+        <h3>Pro</h3>
+        <p class="price">9,99 €<small>/Monat</small></p>
+        <ul><li><b>Unbegrenzte</b> Generierungen</li><li>Bis zu 4 Wochen pro Plan</li><li>Alle Plattform-Varianten</li><li>Monatlich kündbar</li></ul>
+        <button class="btn primary" id="upgradeBtn">Jetzt Pro werden</button>
+        <p class="muted small" id="billingNote"></p>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="historyDialog" class="sheet narrow">
+    <button class="close" data-close aria-label="Schließen">✕</button>
+    <h2>Meine Pläne</h2>
+    <div id="historyList"></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+  <footer class="foot">ViralLab · Made with 🧪 &amp; Claude</footer>
+  <script src="app.js" type="module"></script>
+</body>
+</html>
