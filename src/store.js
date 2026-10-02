@@ -7,7 +7,24 @@ import crypto from 'node:crypto';
 
 export const FREE_LIMIT = Number(process.env.FREE_LIMIT || 10);
 
+/** Returns true if `dir` exists (or can be created) and is writable. */
+export function isWritableDir(dir) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    const probe = path.join(dir, `.write-test-${process.pid}`);
+    fs.writeFileSync(probe, 'ok');
+    fs.unlinkSync(probe);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function createStore(file) {
+  if (file && !isWritableDir(path.dirname(file))) {
+    console.error(`[store] Kann nicht in ${path.dirname(file)} schreiben – Daten werden nur im Arbeitsspeicher gehalten und gehen beim Neustart verloren. Prüfe DATA_DIR bzw. die Disk-Einstellungen.`);
+    file = null;
+  }
   let db = { users: {}, plans: {}, cancellations: [] };
   if (file && fs.existsSync(file)) {
     try { db = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { /* start fresh on corrupt file */ }
@@ -17,10 +34,14 @@ export function createStore(file) {
     if (!file) return;
     clearTimeout(timer);
     timer = setTimeout(() => {
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      const tmp = `${file}.tmp`;
-      fs.writeFileSync(tmp, JSON.stringify(db));
-      fs.renameSync(tmp, file);
+      try {
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        const tmp = `${file}.tmp`;
+        fs.writeFileSync(tmp, JSON.stringify(db));
+        fs.renameSync(tmp, file);
+      } catch (err) {
+        console.error(`[store] Speichern fehlgeschlagen: ${err.message}`);
+      }
     }, 50);
   };
 
@@ -92,8 +113,12 @@ export function createStore(file) {
     flush() {
       if (!file) return;
       clearTimeout(timer);
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, JSON.stringify(db));
+      try {
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, JSON.stringify(db));
+      } catch (err) {
+        console.error(`[store] Speichern fehlgeschlagen: ${err.message}`);
+      }
     },
   };
   return store;

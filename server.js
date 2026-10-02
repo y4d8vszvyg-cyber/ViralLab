@@ -37,9 +37,12 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 
 export function createApp({ store = createStore(path.join(DATA_DIR, 'db.json')), generate = generatePlan } = {}) {
   const app = express();
-  const secret = process.env.SESSION_SECRET || 'virallab-dev-secret';
+  let secret = process.env.SESSION_SECRET || 'virallab-dev-secret';
   if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
-    throw new Error('SESSION_SECRET muss in Produktion gesetzt sein.');
+    // Never use the public dev secret in production. A random secret keeps the site
+    // secure, but visitors lose their session (quota, plans) on every restart.
+    secret = crypto.randomBytes(32).toString('hex');
+    console.warn('[config] SESSION_SECRET fehlt – nutze einen zufälligen Schlüssel. Setze SESSION_SECRET, damit Nutzer nach Neustarts erkannt werden.');
   }
   // Behind a hosting proxy (Render, Railway, Fly): trust X-Forwarded-* for https URLs and secure cookies.
   app.set('trust proxy', 1);

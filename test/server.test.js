@@ -1,6 +1,9 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
 import { createApp } from '../server.js';
 import { createStore, FREE_LIMIT } from '../src/store.js';
 import { generatePlanOffline } from '../src/engine.js';
@@ -130,4 +133,13 @@ test('cancellation ends demo Pro and returns a confirmation', async () => {
   assert.match(r.body.cancellation.id, /^[0-9A-F]{8}$/);
   assert.ok(r.body.cancellation.receivedAt);
   assert.equal((await call('/api/me')).body.quota.tier, 'free');
+});
+
+test('store falls back to memory when the data dir is not writable', () => {
+  const blocker = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'vl-')), 'file');
+  fs.writeFileSync(blocker, 'x'); // a file where a directory is expected => not writable
+  const store = createStore(path.join(blocker, 'data', 'db.json'));
+  const user = store.getUser('u1');
+  store.recordGeneration(user);
+  assert.equal(store.getUser('u1').generations, 1);
 });
