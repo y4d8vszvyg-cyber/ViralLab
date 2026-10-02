@@ -65,3 +65,22 @@ export function verifyWebhook(rawBody, header, secret, toleranceSec = 300) {
   const expected = crypto.createHmac('sha256', secret).update(`${t}.${rawBody}`).digest('hex');
   return signatures.some((s) => s.length === expected.length && crypto.timingSafeEqual(Buffer.from(s), Buffer.from(expected)));
 }
+
+/** Find active subscriptions for a customer id or (fallback) an e-mail address. */
+export async function findActiveSubscriptions({ customerId, email }) {
+  const customers = customerId ? [customerId]
+    : email ? (await stripe('GET', `/customers?limit=10&email=${encodeURIComponent(email)}`)).data.map((c) => c.id) : [];
+  const subs = [];
+  for (const c of customers) {
+    const list = await stripe('GET', `/subscriptions?status=active&limit=10&customer=${encodeURIComponent(c)}`);
+    subs.push(...list.data);
+  }
+  return subs;
+}
+
+/** Cancel at the end of the current billing period; returns the end date (Date) if known. */
+export async function cancelAtPeriodEnd(subscriptionId) {
+  const sub = await stripe('POST', `/subscriptions/${encodeURIComponent(subscriptionId)}`, { cancel_at_period_end: 'true' });
+  const end = sub.cancel_at || sub.items?.data?.[0]?.current_period_end || sub.current_period_end;
+  return end ? new Date(end * 1000) : null;
+}

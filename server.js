@@ -7,7 +7,9 @@ import { z } from 'zod';
 import { createStore, FREE_LIMIT } from './src/store.js';
 import { analyzeNiche } from './src/analyzer.js';
 import { generatePlan, aiEnabled } from './src/ai.js';
-import { stripeEnabled, createCheckoutSession, retrieveCheckoutSession, createPortalSession, verifyWebhook, PRO_PRICE_CENTS } from './src/billing.js';
+import { stripeEnabled, createCheckoutSession, retrieveCheckoutSession, createPortalSession, verifyWebhook, findActiveSubscriptions, cancelAtPeriodEnd, PRO_PRICE_CENTS } from './src/billing.js';
+import { renderLegalPage, renderCancelPage } from './src/legal.js';
+import { sendMail } from './src/mail.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -21,6 +23,14 @@ const GenerateInput = z.object({
   weeks: z.coerce.number().int().min(1).max(4).default(1),
   nicheVideos: z.string().max(20000).optional(),
   seed: z.coerce.number().int().optional(),
+});
+
+const CancelInput = z.object({
+  type: z.enum(['ordentlich', 'ausserordentlich']).default('ordentlich'),
+  reason: z.string().trim().max(1000).optional(),
+  name: z.string().trim().min(2, 'Bitte gib deinen Namen an.').max(120),
+  email: z.string().trim().email('Bitte gib eine gültige E-Mail-Adresse an.').max(200),
+  date: z.string().trim().max(20).optional(),
 });
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
@@ -74,6 +84,7 @@ export function createApp({ store = createStore(path.join(DATA_DIR, 'db.json')),
     res.json({
       quota: store.quota(req.user),
       features: { ai: aiEnabled(), stripe: stripeEnabled(), demoUpgrade: allowDemoUpgrade },
+      billing: { manageable: stripeEnabled() && Boolean(req.user.stripeCustomerId) },
       pricing: { freeGenerations: FREE_LIMIT, proMonthlyEur: PRO_PRICE_CENTS / 100 },
     });
   });
@@ -119,6 +130,9 @@ export function createApp({ store = createStore(path.join(DATA_DIR, 'db.json')),
 
   app.post('/api/billing/checkout', async (req, res) => {
     if (store.isPro(req.user)) return res.json({ alreadyPro: true });
+    if (req.body?.consent !== true) {
+      return res.status(400).json({ error: 'Bitte bestätige die AGB und den sofortigen Leistungsbeginn.' });
+    }
     if (stripeEnabled()) {
       try {
         const session = await createCheckoutSession(req.user, baseUrl(req));
@@ -156,6 +170,54 @@ export function createApp({ store = createStore(path.join(DATA_DIR, 'db.json')),
       res.status(502).json({ error: 'Kundenportal nicht erreichbar.' });
     }
   });
+
+  // Cancellation button required for online subscriptions in Germany (§ 312k BGB).
+  app.post('/api/cancel', async (req, res) => {
+    const parsed = CancelInput.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+    const input = parsed.data;
+    const user = req.user;
+    let periodEnd = null;
+    let stripeStatus = 'nicht_gefunden';
+    try {
+      if (stripeEnabled()) {
+        const subs = user.stripeSubscriptionId
+          ? [{ id: user.stripeSubscriptionId }]
+          : await findActiveSubscriptions({ customerId: user.stripeCustomerId, email: input.email });
+        for (const sub of subs) periodEnd = (await cancelAtPeriodEnd(sub.id)) || periodEnd;
+        if (subs.length) stripeStatus = 'gekuendigt';
+      } else if (store.isPro(user)) {
+        store.setFree(user);
+        stripeStatus = 'demo_beendet';
+      }
+    } catch (err) {
+      console.error('[cancel] Stripe-Kündigung fehlgeschlagen:', err.message);
+      stripeStatus = 'fehler_manuell_pruefen';
+    }
+    const effective = periodEnd
+      ? `${periodEnd.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' })} (Ende des Abrechnungszeitraums)`
+      : 'Ende des laufenden Abrechnungszeitraums';
+    const cancellation = store.addCancellation({ ...input, userId: user.id, effective, stripeStatus });
+    const text = `Hallo ${input.name},
+
+wir bestätigen den Eingang deiner Kündigung für ViralLab Pro.
+
+Referenz: ${cancellation.id}
+Eingegangen am: ${new Date(cancellation.receivedAt).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })}
+Art: ${input.type === 'ausserordentlich' ? 'außerordentliche' : 'ordentliche'} Kündigung
+${input.date ? `Gewünschter Zeitpunkt: ${input.date}\n` : ''}Wirksam zum: ${effective}
+
+Bis dahin kannst du Pro weiter nutzen. Danach wird nichts mehr abgebucht.
+
+Dein ViralLab-Team`;
+    const mailSent = await sendMail({ to: input.email, bcc: process.env.LEGAL_EMAIL, subject: `Kündigungsbestätigung ViralLab (${cancellation.id})`, text }).catch(() => false);
+    res.json({ cancellation: { id: cancellation.id, receivedAt: cancellation.receivedAt, name: input.name, email: input.email, type: input.type, effective }, mailSent });
+  });
+
+  for (const slug of ['impressum', 'datenschutz', 'agb', 'widerruf']) {
+    app.get(`/${slug}`, (req, res) => res.type('html').send(renderLegalPage(slug)));
+  }
+  app.get('/kuendigen', (req, res) => res.type('html').send(renderCancelPage()));
 
   app.use(express.static(path.join(__dirname, 'public')));
   return { app, store };

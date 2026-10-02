@@ -116,9 +116,28 @@ docker run -d -p 80:3000 -v virallab-data:/data -e SESSION_SECRET=$(openssl rand
 - [ ] `PUBLIC_URL` zeigt auf die echte Domain, sonst stimmen die Stripe-Weiterleitungen nicht.
 - [ ] Stripe ist eingerichtet. Ohne Stripe ist der Demo-Modus aktiv, und **jeder kann Pro gratis freischalten**. Alternativ `ALLOW_DEMO_UPGRADE=false` setzen.
 - [ ] Der Stripe-Webhook zeigt auf `https://<domain>/api/billing/webhook`.
-- [ ] Impressum und Datenschutzerklärung sind ergänzt (Pflicht in Deutschland).
+- [ ] `LEGAL_NAME`, `LEGAL_ADDRESS` und `LEGAL_EMAIL` sind gesetzt. Solange sie fehlen, zeigen die Rechtsseiten einen Warnhinweis.
+- [ ] Der E-Mail-Versand (`RESEND_API_KEY`, `MAIL_FROM`) ist eingerichtet, damit Kündigungen automatisch in Textform bestätigt werden.
+- [ ] Die Rechtstexte sind von einer Fachperson geprüft. Es sind Vorlagen, keine Rechtsberatung.
 
 Der Health-Check läuft unter `GET /healthz`. CI (GitHub Actions) führt bei jedem Push die Tests und den Docker-Build aus.
+
+## ⚖️ Rechtliches (Deutschland)
+
+| Seite | Inhalt |
+|---|---|
+| `/impressum` | Angaben nach § 5 DDG |
+| `/datenschutz` | Hosting, Cookie, KI-Verarbeitung (Anthropic), Zahlungen (Stripe), Rechte |
+| `/agb` | Leistungen, Laufzeit, Kündigung, Nutzungsrechte, Haftung |
+| `/widerruf` | Widerrufsbelehrung mit Muster-Formular |
+| `/kuendigen` | **Kündigungsbutton** nach § 312k BGB |
+
+- Die Betreiberangaben kommen aus Umgebungsvariablen (`LEGAL_*`, siehe `.env.example`). Du musst also keinen Code ändern.
+- **Checkout:** Vor dem Abo muss der Kunde den AGB zustimmen und den sofortigen Leistungsbeginn vor Ablauf der Widerrufsfrist bestätigen.
+- **Kündigung:** Die Seite kündigt das Stripe-Abo zum Ende des Abrechnungszeitraums. Gefunden wird es über den Browser des Kunden oder über die E-Mail-Adresse bei Stripe. Der Kunde sieht sofort eine Bestätigung mit Eingangszeit. Ist Resend eingerichtet, bekommt er sie zusätzlich per E-Mail, mit Kopie an `LEGAL_EMAIL`.
+  - Ohne E-Mail-Versand landen Kündigungen in `data/db.json` und im Server-Log. Die Bestätigung musst du dann selbst per E-Mail schicken.
+- **Abo verwalten:** Pro-Kunden öffnen über die Preis-Ansicht das Stripe-Kundenportal für Rechnungen, Zahlungsmethode und Kündigung.
+- **Schriften:** Sie werden vom eigenen Server geladen, es gehen keine Anfragen an Google.
 
 ## Tests
 

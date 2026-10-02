@@ -8,7 +8,7 @@ import crypto from 'node:crypto';
 export const FREE_LIMIT = Number(process.env.FREE_LIMIT || 10);
 
 export function createStore(file) {
-  let db = { users: {}, plans: {} };
+  let db = { users: {}, plans: {}, cancellations: [] };
   if (file && fs.existsSync(file)) {
     try { db = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { /* start fresh on corrupt file */ }
   }
@@ -82,6 +82,12 @@ export function createStore(file) {
       delete db.plans[id];
       persist();
       return true;
+    },
+    addCancellation(record) {
+      const entry = { id: crypto.randomUUID().slice(0, 8).toUpperCase(), receivedAt: new Date().toISOString(), ...record };
+      (db.cancellations ||= []).push(entry);
+      persist();
+      return entry;
     },
     flush() {
       if (!file) return;

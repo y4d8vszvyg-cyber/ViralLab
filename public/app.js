@@ -48,7 +48,11 @@ async function loadMe() {
   renderQuota(state.me.quota);
   $('#freeCount').textContent = state.me.pricing.freeGenerations;
   const f = state.me.features;
-  $('#billingNote').textContent = f.stripe ? 'Sichere Zahlung über Stripe.' : f.demoUpgrade ? 'Demo-Modus: Pro wird 30 Tage kostenlos freigeschaltet.' : '';
+  $('#billingNote').textContent = f.stripe ? '9,99 € pro Monat, monatlich kündbar. Sichere Zahlung über Stripe.' : f.demoUpgrade ? 'Demo-Modus: Pro wird 30 Tage kostenlos freigeschaltet.' : '';
+  const isPro = state.me.quota.tier === 'pro';
+  $('#buyBox').hidden = isPro;
+  $('#manageBox').hidden = !isPro;
+  $('#manageBtn').hidden = !state.me.billing?.manageable;
 }
 
 /* ---------- niche lab ---------- */
@@ -240,7 +244,7 @@ $$('dialog').forEach((d) => {
 
 $('#upgradeBtn').addEventListener('click', async () => {
   try {
-    const data = await api('/api/billing/checkout', { method: 'POST' });
+    const data = await api('/api/billing/checkout', { method: 'POST', body: { consent: $('#consent').checked } });
     if (data.url) { location.href = data.url; return; }
     if (data.quota) renderQuota(data.quota);
     toast(data.alreadyPro ? 'Du bist bereits Pro ⚡' : 'Pro aktiviert ⚡ (Demo)');
@@ -248,6 +252,15 @@ $('#upgradeBtn').addEventListener('click', async () => {
     await loadMe();
   } catch (e) { toast(e.message); }
 });
+
+$('#consent').addEventListener('change', (e) => { $('#upgradeBtn').disabled = !e.target.checked; });
+$('#manageBtn').addEventListener('click', async () => {
+  try {
+    const data = await api('/api/billing/portal', { method: 'POST' });
+    location.href = data.url;
+  } catch (e) { toast(e.message); }
+});
+$('#quota').addEventListener('click', () => openDialog('pricing'));
 
 async function loadHistory() {
   const list = $('#historyList');

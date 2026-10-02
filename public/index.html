@@ -6,8 +6,6 @@
   <title>ViralLab – KI-Content-Pläne für TikTok, Reels & Shorts</title>
   <meta name="description" content="Beschreibe dein Business – ViralLab erstellt Hooks, Skripte, Captions, Hashtags und einen kompletten Content-Kalender für TikTok, Instagram Reels und YouTube Shorts.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧪</text></svg>">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -138,8 +136,18 @@ Ich hätte nie gedacht, dass Leinen so edel aussieht | 1,4M | 120k | 2k | 9k | 3
         <h3>Pro</h3>
         <p class="price">9,99 €<small>/Monat</small></p>
         <ul><li><b>Unbegrenzte</b> Generierungen</li><li>Bis zu 4 Wochen pro Plan</li><li>Alle Plattform-Varianten</li><li>Monatlich kündbar</li></ul>
-        <button class="btn primary" id="upgradeBtn">Jetzt Pro werden</button>
-        <p class="muted small" id="billingNote"></p>
+        <div id="buyBox">
+          <label class="consent"><input type="checkbox" id="consent">
+            <span>Ich akzeptiere die <a href="/agb" target="_blank">AGB</a> und verlange ausdrücklich, dass ViralLab Pro vor Ablauf der Widerrufsfrist beginnt. Mir ist bekannt, dass ich bei einem Widerruf einen anteiligen Betrag zahle (<a href="/widerruf" target="_blank">Widerrufsbelehrung</a>).</span>
+          </label>
+          <button class="btn primary" id="upgradeBtn" disabled>Zahlungspflichtig abonnieren</button>
+          <p class="muted small" id="billingNote"></p>
+        </div>
+        <div id="manageBox" hidden>
+          <p class="small">⚡ Du hast Pro.</p>
+          <button class="btn ghost" id="manageBtn">Abo verwalten</button>
+          <p class="muted small">Rechnungen, Zahlungsmethode und Kündigung im Stripe-Kundenportal.</p>
+        </div>
       </div>
     </div>
   </dialog>
@@ -151,7 +159,10 @@ Ich hätte nie gedacht, dass Leinen so edel aussieht | 1,4M | 120k | 2k | 9k | 3
   </dialog>
 
   <div id="toast" class="toast" role="status"></div>
-  <footer class="foot">ViralLab · Made with 🧪 &amp; Claude</footer>
+  <footer class="foot">
+    <nav class="foot-links"><a href="/impressum">Impressum</a><a href="/datenschutz">Datenschutz</a><a href="/agb">AGB</a><a href="/widerruf">Widerrufsbelehrung</a><a href="/kuendigen" class="cancel-link">Verträge hier kündigen</a></nav>
+    <p>ViralLab · Made with 🧪 &amp; Claude</p>
+  </footer>
   <script src="app.js" type="module"></script>
 </body>
 </html>

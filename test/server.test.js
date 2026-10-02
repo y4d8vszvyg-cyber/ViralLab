@@ -44,7 +44,9 @@ test('free tier allows exactly FREE_LIMIT generations, then 402', async () => {
 test('demo upgrade unlocks unlimited generations', async () => {
   const call = client();
   await call('/api/me');
-  const up = await call('/api/billing/checkout', { method: 'POST' });
+  const noConsent = await call('/api/billing/checkout', { method: 'POST', body: {} });
+  assert.equal(noConsent.status, 400);
+  const up = await call('/api/billing/checkout', { method: 'POST', body: { consent: true } });
   assert.equal(up.body.demo, true);
   assert.equal(up.body.quota.tier, 'pro');
   const r = await call('/api/generate', { method: 'POST', body: { description: 'Personal Trainer sucht mehr Anfragen' } });
@@ -91,4 +93,41 @@ test('health check', async () => {
   const r = await client()('/healthz');
   assert.equal(r.status, 200);
   assert.equal(r.body.ok, true);
+});
+
+async function getText(path) {
+  const res = await fetch(base + path);
+  return { status: res.status, text: await res.text() };
+}
+
+test('legal pages render with placeholders and the cancel link', async () => {
+  for (const slug of ['impressum', 'datenschutz', 'agb', 'widerruf', 'kuendigen']) {
+    const r = await getText('/' + slug);
+    assert.equal(r.status, 200, slug);
+    assert.match(r.text, /Verträge hier kündigen/);
+  }
+  assert.match((await getText('/impressum')).text, /\[Vor- und Nachname \/ Firma\]/);
+  assert.match((await getText('/')).text, /href="\/kuendigen"/);
+});
+
+test('legal pages use operator details from env', async () => {
+  const { renderLegalPage } = await import('../src/legal.js');
+  const html = renderLegalPage('impressum', { LEGAL_NAME: 'Max <Muster>', LEGAL_ADDRESS: 'Hauptstr. 1, 10115 Berlin', LEGAL_EMAIL: 'hi@example.de' });
+  assert.match(html, /Max &lt;Muster&gt;/);
+  assert.match(html, /Hauptstr\. 1<br>10115 Berlin/);
+  assert.doesNotMatch(html, /Betreiberangaben fehlen/);
+});
+
+test('cancellation ends demo Pro and returns a confirmation', async () => {
+  const call = client();
+  await call('/api/me');
+  await call('/api/billing/checkout', { method: 'POST', body: { consent: true } });
+  assert.equal((await call('/api/me')).body.quota.tier, 'pro');
+  const bad = await call('/api/cancel', { method: 'POST', body: { name: 'Max', email: 'kein-mail' } });
+  assert.equal(bad.status, 400);
+  const r = await call('/api/cancel', { method: 'POST', body: { name: 'Max Muster', email: 'max@example.de', type: 'ordentlich' } });
+  assert.equal(r.status, 200);
+  assert.match(r.body.cancellation.id, /^[0-9A-F]{8}$/);
+  assert.ok(r.body.cancellation.receivedAt);
+  assert.equal((await call('/api/me')).body.quota.tier, 'free');
 });
