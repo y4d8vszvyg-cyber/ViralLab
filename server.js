@@ -9,6 +9,10 @@ import { analyzeNiche } from './src/analyzer.js';
 import { generatePlan, aiEnabled } from './src/ai.js';
 import { stripeEnabled, createCheckoutSession, retrieveCheckoutSession, createPortalSession, verifyWebhook, findActiveSubscriptions, cancelAtPeriodEnd, PRO_PRICE_CENTS } from './src/billing.js';
 import { renderLegalPage, renderCancelPage } from './src/legal.js';
+import { optionCatalog } from './src/catalog.js';
+import { INDUSTRIES, GOALS } from './src/industries.js';
+import { FORMATS } from './src/engine.js';
+import { PLATFORMS, TONES, VIDEO_LENGTHS, ON_CAMERA, CTAS, EMOJIS, HASHTAG_COUNTS } from './src/options.js';
 import { sendMail } from './src/mail.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -16,10 +20,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const GenerateInput = z.object({
   description: z.string().trim().min(10, 'Beschreibe dein Business in mindestens 10 Zeichen.').max(2000),
   brand: z.string().trim().max(60).optional(),
-  goal: z.enum(['sales', 'leads', 'reach', 'brand']).optional(),
-  industry: z.string().max(30).optional(),
-  tone: z.string().trim().max(80).optional(),
-  postsPerWeek: z.coerce.number().int().refine((n) => [3, 4, 5, 7].includes(n)).default(7),
+  goal: z.enum(Object.keys(GOALS)).optional(),
+  industry: z.enum(Object.keys(INDUSTRIES)).optional(),
+  audience: z.string().trim().max(200).optional(),
+  tone: z.enum(Object.keys(TONES)).optional(),
+  toneCustom: z.string().trim().max(120).optional(),
+  platforms: z.array(z.enum(PLATFORMS)).max(PLATFORMS.length).optional(),
+  videoLength: z.enum(Object.keys(VIDEO_LENGTHS)).optional(),
+  onCamera: z.enum(Object.keys(ON_CAMERA)).optional(),
+  cta: z.enum(Object.keys(CTAS)).optional(),
+  emojis: z.enum(Object.keys(EMOJIS)).optional(),
+  hashtagCount: z.coerce.number().int().refine((n) => HASHTAG_COUNTS.includes(n)).optional(),
+  formats: z.array(z.enum(Object.keys(FORMATS))).max(Object.keys(FORMATS).length).optional(),
+  postsPerWeek: z.coerce.number().int().min(1).max(7).default(7),
   weeks: z.coerce.number().int().min(1).max(4).default(1),
   nicheVideos: z.string().max(20000).optional(),
   seed: z.coerce.number().int().optional(),
@@ -91,6 +104,8 @@ export function createApp({ store = createStore(path.join(DATA_DIR, 'db.json')),
       pricing: { freeGenerations: FREE_LIMIT, proMonthlyEur: PRO_PRICE_CENTS / 100 },
     });
   });
+
+  app.get('/api/options', (req, res) => res.json(optionCatalog()));
 
   app.post('/api/analyze', (req, res) => {
     const analysis = analyzeNiche(String(req.body?.videos || ''));

@@ -25,9 +25,25 @@ Freitag    🎬 Tutorial / How-to
 | 📱 **Plattform-Varianten** | TikTok, Instagram Reels und YouTube Shorts mit eigener Länge, eigenem Overlay und eigenem CTA |
 | 🔬 **Nischen-Lab** | Analysiert erfolgreiche Videos deiner Nische (Hook-Muster, Länge, Engagement, Keywords) und entwickelt daraus **neue, eigene** Konzepte, statt Videos zu kopieren |
 | 🧱 **Content-Säulen** | Mix aus Reichweite, Vertrauen, Community und Verkauf |
+| ⚙️ **Viele Optionen** | Branche, Ziel, Rhythmus, Plattformen, Tonalität, Videolänge, Kamera, Call-to-Action, Emojis, Hashtags, Zielgruppe und Formate. Die Einstellungen bleiben gespeichert. |
 | 🗂 **Verlauf** | Alle Pläne werden gespeichert und lassen sich wieder öffnen |
 
 ![Post-Details](docs/post.png)
+
+## Auswahlmöglichkeiten
+
+| Option | Auswahl |
+|---|---|
+| **Branche** | Automatisch, Mode, Fitness, Gastronomie, Beauty, Coaching, Tech, Immobilien, Handwerk, Gesundheit & Praxis, Reisen & Hotel, Bildung & Nachhilfe, Haustiere, Auto & Werkstatt, Andere |
+| **Ziel** | Mehr Verkäufe, Anfragen/Leads, Reichweite, Stärkere Marke, Produkt-Launch, Mehr Besucher vor Ort, Mehr Engagement, Mitarbeiter finden |
+| **Rhythmus** | 1–7 Posts pro Woche, 1–4 Wochen |
+| **Plattformen** | TikTok, Instagram Reels, YouTube Shorts (beliebig kombinierbar) |
+| **Tonalität** | Locker & frech, Professionell, Humorvoll, Inspirierend, Edel & minimalistisch, Ehrlich & nahbar, Mutig & polarisierend, Lehrreich, dazu eigene Wünsche als Freitext |
+| **Videolänge** | Kurz (7–15 Sek.), Mittel (15–30 Sek.), Lang (30–60 Sek.), Gemischt |
+| **Vor der Kamera** | Mit Gesicht, ohne Gesicht (faceless), gemischt |
+| **Call-to-Action** | Link in Bio, DM, Kommentieren, Website, Vorbeikommen/Termin, Folgen, Speichern & teilen |
+| **Emojis / Hashtags** | Viele, wenige oder keine Emojis; 3, 5, 8 oder 12 Hashtags |
+| **Formate** | Fehler-Liste, Produktvideo, Storytelling, Tutorial, POV, Mythos, Behind the Scenes, Vorher/Nachher, Kommentar-Antwort, Angebot (einzeln an- und abwählbar) |
 
 ## Wie das Nischen-Lab funktioniert
 
@@ -154,6 +170,9 @@ server.js            Express-API (Generierung, Analyse, Pläne, Billing)
 src/analyzer.js      Nischen-Analyse: Parsing, Hook-Muster, Engagement, Insights
 src/engine.js        Offline-Content-Engine (Formate, Kalender, Varianten)
 src/industries.js    Branchenprofile & Zielerkennung
+src/options.js       Wählbare Optionen (Tonalität, Länge, CTA …)
+src/catalog.js       Options-Katalog fürs Frontend
+scripts/build-demo.mjs  Baut eine Browser-only-Demo (dist/virallab-demo.html)
 src/ai.js            Claude-Integration mit Structured Output + Fallback
 src/schema.js        Zod-Schema eines Content-Plans
 src/store.js         JSON-Datei-Store (Nutzer, Kontingente, Pläne)
@@ -166,8 +185,9 @@ public/              Frontend (Vanilla JS, ohne Build-Schritt)
 | Methode | Pfad | Beschreibung |
 |---|---|---|
 | `GET` | `/api/me` | Kontingent & aktive Features |
+| `GET` | `/api/options` | Alle wählbaren Optionen (Branchen, Ziele, Tonalitäten …) |
 | `POST` | `/api/analyze` | `{ videos }` → Nischen-Analyse |
-| `POST` | `/api/generate` | `{ description, brand?, goal?, tone?, postsPerWeek?, weeks?, nicheVideos?, seed? }` → Plan |
+| `POST` | `/api/generate` | `{ description, brand?, industry?, goal?, audience?, tone?, toneCustom?, platforms?, videoLength?, onCamera?, cta?, emojis?, hashtagCount?, formats?, postsPerWeek?, weeks?, nicheVideos?, seed? }` → Plan |
 | `GET/DELETE` | `/api/plans[/:id]` | Gespeicherte Pläne |
 | `POST` | `/api/billing/checkout` | Pro-Abo starten |
 | `POST` | `/api/billing/portal` | Stripe-Kundenportal |

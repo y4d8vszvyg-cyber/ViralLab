@@ -70,6 +70,23 @@ main { max-width: 1180px; margin: 0 auto; padding: 0 clamp(1rem, 4vw, 2rem) 4rem
 .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .9rem; }
 .grid label { font-size: .85rem; color: var(--muted); display: grid; gap: .35rem; }
 .grid .wide { grid-column: 1 / -1; }
+.grid .span2 { grid-column: span 2; }
+.grid .span3 { grid-column: span 3; }
+@media (max-width: 720px) { .grid .span2, .grid .span3 { grid-column: 1 / -1; } }
+.more { margin-top: 1rem; border: 1px solid var(--line); border-radius: 14px; padding: .9rem 1rem; background: #ffffff05; }
+.more[open] { display: grid; gap: 1rem; }
+.more summary { cursor: pointer; font-weight: 600; }
+.more summary small { color: var(--muted); font-weight: 400; margin-left: .3rem; }
+.opt-section { display: grid; gap: .45rem; }
+.opt-label { font-size: .85rem; color: var(--muted); display: flex; align-items: center; gap: .4rem; }
+.opt-label .btn.link { padding: 0 .3rem; font-size: .78rem; }
+.chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+.toggle { position: relative; }
+.toggle input { position: absolute; opacity: 0; pointer-events: none; }
+.toggle span { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: .32rem .8rem; font-size: .85rem; cursor: pointer; color: var(--muted); transition: all .15s; user-select: none; }
+.toggle input:checked + span { background: #8b5cf62e; border-color: var(--violet); color: var(--text); }
+.toggle input:checked + span::before { content: '✓ '; }
+.toggle input:focus-visible + span { outline: 2px solid var(--cyan); outline-offset: 2px; }
 @media (max-width: 720px) { .grid { grid-template-columns: 1fr 1fr; } }
 
 .niche { margin-top: 1.2rem; border: 1px dashed #8b5cf688; border-radius: 14px; padding: .9rem 1rem; background: #8b5cf60a; }
@@ -199,3 +216,11 @@ table.script { width: 100%; border-collapse: collapse; font-size: .92rem; }
 .legal-warning { background: #ff2e7e1a; border: 1px solid var(--pink); border-radius: 12px; padding: .8rem 1rem; }
 .cancel-form { display: grid; gap: .9rem; margin-top: 1rem; }
 .cancel-form label { display: grid; gap: .35rem; font-size: .9rem; color: var(--muted); }
+.topbar nav .link { white-space: nowrap; }
+@media (max-width: 520px) {
+  .more .grid { grid-template-columns: 1fr; }
+  .topbar { padding-inline: 1rem; }
+  .topbar nav { gap: .15rem; }
+  .topbar nav .link { padding: .35rem .4rem; font-size: .85rem; }
+  .logo { font-size: 1.15rem; }
+}

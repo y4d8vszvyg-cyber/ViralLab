@@ -4,7 +4,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { PlanSchema } from './schema.js';
-import { generatePlanOffline, WEEKDAYS } from './engine.js';
+import { generatePlanOffline, WEEKDAYS, SLOTS } from './engine.js';
+import { INDUSTRIES, GOALS } from './industries.js';
+import { PLATFORMS, TONES, VIDEO_LENGTHS, ON_CAMERA, CTAS, EMOJIS } from './options.js';
+import { FORMATS } from './engine.js';
 
 const MODEL = process.env.VIRALLAB_MODEL || 'claude-opus-5-5';
 
@@ -22,8 +25,7 @@ Mische Reichweite-, Vertrauens-, Community- und Verkaufs-Posts passend zum Ziel.
 Wenn eine Nischenanalyse erfolgreicher Videos mitgeliefert wird: Kopiere keine Videos. Leite die Muster ab, die sie erfolgreich machen (Hook-Typ, Länge, Struktur, Emotion), und baue daraus neue, eigene Konzepte für dieses Unternehmen. Benenne im Feld inspiredBy, welches Muster die Vorlage war.`;
 
 function slotsFor(postsPerWeek, weeks) {
-  const map = { 3: [0, 2, 4], 4: [0, 1, 3, 5], 5: [0, 1, 2, 3, 4], 7: [0, 1, 2, 3, 4, 5, 6] };
-  const slots = map[postsPerWeek] || map[7];
+  const slots = SLOTS[postsPerWeek] || SLOTS[7];
   const out = [];
   for (let w = 0; w < weeks; w++) for (const s of slots) out.push({ dayIndex: w * 7 + s, day: weeks > 1 ? `${WEEKDAYS[s]} (Woche ${w + 1})` : WEEKDAYS[s] });
   return out;
@@ -35,8 +37,18 @@ export function buildUserPrompt(input, analysis) {
   const lines = [
     `<unternehmen>\n${input.description}\n</unternehmen>`,
     input.brand ? `Markenname: ${input.brand}` : '',
-    input.goal ? `Hauptziel: ${input.goal}` : '',
-    input.tone ? `Tonalität: ${input.tone}` : '',
+    INDUSTRIES[input.industry] ? `Branche: ${INDUSTRIES[input.industry].label}` : '',
+    GOALS[input.goal] ? `Hauptziel: ${GOALS[input.goal].label}` : '',
+    input.audience ? `Zielgruppe: ${input.audience}` : '',
+    TONES[input.tone] ? `Tonalität: ${TONES[input.tone].label} (${TONES[input.tone].prompt})` : '',
+    input.toneCustom ? `Zusätzliche Tonalitäts-Wünsche: ${input.toneCustom}` : '',
+    VIDEO_LENGTHS[input.videoLength] ? `Videolänge: ${VIDEO_LENGTHS[input.videoLength].label}` : '',
+    ON_CAMERA[input.onCamera] ? `Kamera: ${ON_CAMERA[input.onCamera].label}${input.onCamera === 'faceless' ? ' – Skripte ohne Gesicht im Bild (Voiceover, B-Roll, Text-Overlays)' : ''}` : '',
+    CTAS[input.cta] ? `Call-to-Action in allen Posts: ${CTAS[input.cta].text}` : '',
+    EMOJIS[input.emojis] ? `Emojis: ${EMOJIS[input.emojis].label}` : '',
+    input.hashtagCount ? `Genau ${input.hashtagCount} Hashtags pro Post.` : '',
+    `Plattform-Varianten nur für: ${(input.platforms?.length ? input.platforms : PLATFORMS).join(', ')}.`,
+    input.formats?.length ? `Nutze nur diese Formate: ${input.formats.map((f) => FORMATS[f]?.name).filter(Boolean).join(', ')}.` : '',
     `Erstelle genau ${slots.length} Posts für diese Tage (day / dayIndex):\n${slots.map((s) => `- ${s.day} / ${s.dayIndex}`).join('\n')}`,
   ];
   if (analysis) {

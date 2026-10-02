@@ -81,12 +81,90 @@ $('#sampleBtn').addEventListener('click', () => { $('[name=nicheVideos]').value 
 
 $$('[data-example]').forEach((b) => b.addEventListener('click', () => { $('#description').value = b.dataset.example; $('#description').focus(); }));
 
+/* ---------- options ---------- */
+const SETTINGS_KEY = 'virallab:settings';
+const MULTI = ['platforms', 'formats'];
+
+function fillOptions(catalog) {
+  $$('select[data-options]').forEach((sel) => {
+    const items = catalog[sel.dataset.options].map((o) => (typeof o === 'object' ? o : { value: String(o), label: String(o) }));
+    const label = (o) => sel.name === 'postsPerWeek' ? (o.value === '7' ? '7 (täglich)' : o.label)
+      : sel.name === 'weeks' ? `${o.label} ${o.value === '1' ? 'Woche' : 'Wochen'}` : o.label;
+    sel.innerHTML = (sel.dataset.auto ? `<option value="">${esc(sel.dataset.auto)}</option>` : '') +
+      items.map((o) => `<option value="${esc(o.value)}">${esc(label(o))}</option>`).join('');
+    if (sel.dataset.default) sel.value = sel.dataset.default;
+  });
+  $$('[data-chips]').forEach((box) => {
+    const items = catalog[box.dataset.chips].map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+    box.innerHTML = items.map((o) => `<label class="toggle"><input type="checkbox" name="${box.dataset.name}" value="${esc(o.value)}" checked><span>${esc(o.label)}</span></label>`).join('');
+  });
+}
+
+function readSettings() {
+  const fd = new FormData($('#gen'));
+  const out = {};
+  for (const [k, v] of fd.entries()) if (!MULTI.includes(k) && k !== 'description' && k !== 'nicheVideos') out[k] = v;
+  for (const k of MULTI) out[k] = fd.getAll(k);
+  return out;
+}
+
+function applySettings(saved) {
+  for (const [k, v] of Object.entries(saved || {})) {
+    if (MULTI.includes(k)) $$(`input[name="${k}"]`).forEach((cb) => { cb.checked = v.includes(cb.value); });
+    else { const el = $(`[name="${k}"]`); if (el && el.tagName !== 'TEXTAREA') el.value = v; }
+  }
+}
+
+function saveSettings() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(readSettings())); } catch {}
+  updateOptionsSummary();
+}
+
+function updateOptionsSummary() {
+  const s = readSettings();
+  const parts = [];
+  if (s.platforms.length && s.platforms.length < $$('input[name="platforms"]').length) parts.push(s.platforms.join(', '));
+  const sel = (name) => { const el = $(`[name="${name}"]`); return el.value && el.value !== el.dataset.default ? el.selectedOptions[0].textContent : null; };
+  for (const n of ['tone', 'videoLength', 'onCamera', 'cta', 'emojis']) { const t = sel(n); if (t) parts.push(t); }
+  if (s.formats.length < $$('input[name="formats"]').length) parts.push(`${s.formats.length} Formate`);
+  $('#optionsSummary').textContent = parts.length ? `– ${parts.join(' · ')}` : '– Standard';
+}
+
+async function initOptions() {
+  fillOptions(await api('/api/options'));
+  try { applySettings(JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null')); } catch {}
+  $('#gen').addEventListener('change', saveSettings);
+  $('#formatsAll').addEventListener('click', () => { $$('input[name="formats"]').forEach((c) => { c.checked = true; }); saveSettings(); });
+  $('#formatsNone').addEventListener('click', () => { $$('input[name="formats"]').forEach((c) => { c.checked = false; }); saveSettings(); });
+  $('#resetOptions').addEventListener('click', () => {
+    try { localStorage.removeItem(SETTINGS_KEY); } catch {}
+    $$('select[data-options]').forEach((sel) => { sel.value = sel.dataset.default || ''; });
+    $$('#moreOptions input[type="checkbox"]').forEach((c) => { c.checked = true; });
+    $$('#gen input:not([type="checkbox"])').forEach((i) => { if (i.name !== 'brand') i.value = ''; });
+    saveSettings();
+  });
+  updateOptionsSummary();
+}
+
 /* ---------- generation ---------- */
 function readForm() {
-  const fd = new FormData($('#gen'));
-  const input = Object.fromEntries([...fd.entries()].filter(([, v]) => String(v).trim() !== ''));
-  input.description = $('#description').value.trim();
+  const s = readSettings();
+  const input = { description: $('#description').value.trim() };
+  for (const [k, v] of Object.entries(s)) {
+    if (MULTI.includes(k)) continue;
+    if (String(v).trim() !== '') input[k] = String(v).trim();
+  }
+  // Only send multi-selects when narrowed down; "all" is the default.
+  for (const k of MULTI) if (s[k].length < $$(`input[name="${k}"]`).length) input[k] = s[k];
+  const niche = $('[name=nicheVideos]').value.trim();
+  if (niche) input.nicheVideos = niche;
   return input;
+}
+
+function validateForm(input) {
+  if (input.platforms && !input.platforms.length) return 'Wähle mindestens eine Plattform aus.';
+  if (input.formats && !input.formats.length) return 'Wähle mindestens ein Format aus.';
+  return '';
 }
 
 async function generate(input) {
@@ -117,8 +195,11 @@ async function generate(input) {
 
 $('#gen').addEventListener('submit', (e) => {
   e.preventDefault();
+  const input = readForm();
+  const problem = validateForm(input);
+  if (problem) { $('#formError').textContent = problem; $('#moreOptions').open = true; return; }
   state.seed = 0;
-  generate(readForm());
+  generate(input);
 });
 $('#regenBtn').addEventListener('click', () => {
   if (!state.lastInput) return;
@@ -140,8 +221,16 @@ function renderPlan() {
   const insights = $('#planInsights');
   if (plan.analysis) { insights.innerHTML = '<details><summary class="muted">Nischen-Analyse anzeigen</summary><div id="planAnalysis"></div></details>'; renderAnalysis(plan.analysis, $('#planAnalysis')); }
   else insights.innerHTML = '';
+  syncPlatformTabs();
   renderCalendar();
   $('#result').scrollIntoView({ behavior: 'smooth' });
+}
+
+function syncPlatformTabs() {
+  const available = state.plan.posts[0]?.variants.map((v) => v.platform) || [];
+  $$('.tab').forEach((t) => { t.hidden = !available.includes(t.dataset.platform); });
+  if (!available.includes(state.platform)) state.platform = available[0];
+  $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.platform === state.platform));
 }
 
 function renderCalendar() {
@@ -293,3 +382,4 @@ if (params.get('checkout') === 'success') toast('Willkommen bei Pro ⚡');
 if (params.get('checkout') === 'failed') toast('Zahlung konnte nicht bestätigt werden.');
 if (params.has('checkout')) history.replaceState(null, '', '/');
 loadMe().catch(() => toast('Server nicht erreichbar'));
+initOptions().catch(() => toast('Optionen konnten nicht geladen werden'));

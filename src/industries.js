@@ -30,7 +30,7 @@ export const INDUSTRIES = {
   },
   food: {
     label: 'Gastronomie & Food',
-    match: /\b(restaurant|café|cafe|bäckerei|bar|food|essen|küche|koch|pizza|burger|imbiss|catering|konditorei|eis)/i,
+    match: /\b(restaurant|café|cafe|bäckerei|bar\b|food|essen|küche|koch|pizza|burger|imbiss|catering|konditorei|eis)/i,
     audience: 'Foodies und Locals aus der Umgebung, die neue Lieblingsorte suchen',
     product: 'dieses Gericht', products: ['dieses Gericht', 'unser Signature-Burger', 'dieser Kuchen'],
     result: 'dein Essen', pain: 'dein Essen zu Hause langweilig schmecken lassen',
@@ -69,7 +69,7 @@ export const INDUSTRIES = {
   },
   tech: {
     label: 'Tech, SaaS & Apps',
-    match: /\b(app|software|saas|tool|startup|plattform|tech|ki|ai|website|shopify)/i,
+    match: /\b(apps?|software|saas|tools?|startup|plattform|tech|ki|ai|website|shopify)\b/i,
     audience: 'Digital-affine Profis, die Zeit sparen und produktiver arbeiten wollen',
     product: 'dieses Tool', products: ['dieses Tool', 'diese Funktion', 'unsere App'],
     result: 'deinen Arbeitstag', pain: 'dir jeden Tag eine Stunde klauen',
@@ -92,6 +92,84 @@ export const INDUSTRIES = {
     behind: 'eine Besichtigung aus Sicht des Maklers',
     transformation: 'Leerer Raum → Home-Staging in 60 Sekunden',
     hashtags: ['#immobilien', '#interior', '#einrichtung', '#roomtour', '#homedecor', '#wohnen', '#interiordesign', '#makler', '#hometok', '#wohnideen'],
+  },
+  crafts: {
+    label: 'Handwerk',
+    match: /\b(handwerk|tischler|schreiner|elektriker|maler|dachdecker|sanitär|installateur|fliesen|garten- ?und landschaft|bau|renovier|schlosser|zimmerer)/i,
+    audience: 'Hausbesitzer und Mieter aus der Region, die einen verlässlichen Profi suchen',
+    product: 'dieses Projekt', products: ['dieses Projekt', 'diese Renovierung', 'dieser Auftrag'],
+    result: 'dein Zuhause', pain: 'dich später richtig Geld kosten',
+    mistakeList: ['Den billigsten Anbieter nehmen', 'Ohne schriftliches Angebot starten', 'Wartung jahrelang aufschieben'],
+    tipList: ['So erkennst du saubere Arbeit', 'Diese Frage stellst du jedem Handwerker', 'Der richtige Zeitpunkt für die Sanierung'],
+    myth: 'Handwerker sind immer teuer und unzuverlässig',
+    behind: 'wie ein Auftrag von der Besichtigung bis zur Abnahme abläuft',
+    transformation: 'Altbau-Bad → neues Traumbad in 60 Sekunden',
+    hashtags: ['#handwerk', '#handwerker', '#renovierung', '#vorhernachher', '#baustelle', '#diy', '#sanierung', '#meisterbetrieb', '#handwerkmitherz', '#zuhause'],
+  },
+  health: {
+    label: 'Gesundheit & Praxis',
+    match: /\b(praxis|arzt|ärztin|zahnarzt|physio|therapeut|therapie|osteopath|heilpraktiker|psycholog|apotheke|pflege|gesundheit)/i,
+    audience: 'Menschen mit Beschwerden, die verständliche Erklärungen und eine vertrauenswürdige Praxis suchen',
+    product: 'diese Behandlung', products: ['diese Behandlung', 'diese Übung', 'dieser Ablauf'],
+    result: 'deine Gesundheit', pain: 'deine Beschwerden schlimmer machen',
+    mistakeList: ['Schmerzen zu lange ignorieren', 'Falsche Haltung am Schreibtisch', 'Übungen ohne Anleitung nachmachen'],
+    tipList: ['Eine 2-Minuten-Übung für den Alltag', 'Darauf solltest du beim Arztbesuch achten', 'So bereitest du dich auf den Termin vor'],
+    myth: 'Rückenschmerzen gehen von allein weg',
+    behind: 'wie ein Termin bei uns wirklich abläuft',
+    transformation: 'Vom ersten Termin bis schmerzfrei – eine Patientengeschichte (mit Einwilligung)',
+    hashtags: ['#gesundheit', '#physiotherapie', '#praxis', '#gesundleben', '#rückenschmerzen', '#medizin', '#therapie', '#wellbeing', '#gesundheitstipps', '#praxisalltag'],
+  },
+  travel: {
+    label: 'Reisen & Hotel',
+    match: /\b(hotel|reise|urlaub|ferienwohnung|pension|tourismus|travel|hostel|camping|reisebüro|gästehaus)/i,
+    audience: 'Reiselustige Paare und Familien, die besondere Orte abseits der Massen suchen',
+    product: 'dieses Zimmer', products: ['dieses Zimmer', 'dieser Ausblick', 'dieses Frühstück'],
+    result: 'deinen Urlaub', pain: 'dir den Urlaub verderben',
+    mistakeList: ['Zu spät buchen', 'Nur auf große Portale schauen', 'Den Anreisetag verplanen'],
+    tipList: ['Der beste Zeitpunkt zum Buchen', 'Ein Geheimtipp in der Nähe', 'So bekommst du das schönste Zimmer'],
+    myth: 'Direkt buchen ist teurer als über Portale',
+    behind: 'was passiert, bevor du einchecken kannst',
+    transformation: 'Ein Tag bei uns von Sonnenaufgang bis Sonnenuntergang',
+    hashtags: ['#reisen', '#urlaub', '#travel', '#hotel', '#geheimtipp', '#wanderlust', '#reisetipps', '#urlaubsreif', '#deutschlandreise', '#auszeit'],
+  },
+  education: {
+    label: 'Bildung & Nachhilfe',
+    match: /\b(nachhilfe|schule|lehrer|lehrerin|bildung|sprachschule|fahrschule|akademie|weiterbildung|tutor|lernen)/i,
+    audience: 'Schüler, Studierende und Eltern, die schneller und entspannter lernen wollen',
+    product: 'diese Lernmethode', products: ['diese Lernmethode', 'dieser Kurs', 'diese Übung'],
+    result: 'deine Noten', pain: 'dich beim Lernen ausbremsen',
+    mistakeList: ['Alles am Abend vorher lernen', 'Nur durchlesen statt üben', 'Ohne Pausen lernen'],
+    tipList: ['Die 25-Minuten-Methode', 'Erkläre es einem Kind', 'Wiederhole nach 1, 3 und 7 Tagen'],
+    myth: 'Manche Menschen sind einfach nicht gut in Mathe',
+    behind: 'wie eine Nachhilfestunde bei uns abläuft',
+    transformation: 'Von der 5 zur 2 in einem Halbjahr',
+    hashtags: ['#lernen', '#schule', '#nachhilfe', '#lerntipps', '#studium', '#abitur', '#bildung', '#learnontiktok', '#lernenmittiktok', '#prüfung'],
+  },
+  pets: {
+    label: 'Haustiere',
+    match: /\b(hund|katze|haustier|tierarzt|hundeschule|tierbedarf|pferd|groomer|hundefriseur|tiersitter)/i,
+    audience: 'Tierhalter, die das Beste für ihr Tier wollen',
+    product: 'dieses Spielzeug', products: ['dieses Spielzeug', 'dieses Futter', 'dieses Training'],
+    result: 'deinen Hund', pain: 'deinen Hund unglücklich machen',
+    mistakeList: ['Zu wenig geistige Auslastung', 'Inkonsequent belohnen', 'Falsches Futter für das Alter'],
+    tipList: ['Ein 5-Minuten-Suchspiel', 'So klappt der Rückruf', 'Die richtige Belohnung im richtigen Moment'],
+    myth: 'Alte Hunde lernen nichts Neues mehr',
+    behind: 'ein Tag in unserer Hundeschule',
+    transformation: 'Vom Leinenpöbler zum entspannten Begleiter',
+    hashtags: ['#hund', '#hundeleben', '#dogsoftiktok', '#katze', '#haustier', '#hundetraining', '#hundeliebe', '#petsoftiktok', '#tierliebe', '#welpe'],
+  },
+  automotive: {
+    label: 'Auto & Werkstatt',
+    match: /\b(autos?\b|autowerkstatt|autopflege|autoaufbereitung|kfz|werkstatt|autohaus|reifen|aufbereitung|detailing|tuning|motorrad|fahrzeug)/i,
+    audience: 'Autofahrer, die ihr Fahrzeug lieben und keine böse Überraschung in der Werkstatt wollen',
+    product: 'diese Aufbereitung', products: ['diese Aufbereitung', 'dieser Wagen', 'dieser Service'],
+    result: 'dein Auto', pain: 'deinem Auto langfristig schaden',
+    mistakeList: ['Warnleuchten ignorieren', 'In der Waschstraße polieren lassen', 'Reifendruck nie prüfen'],
+    tipList: ['Der 2-Minuten-Check vor der Urlaubsfahrt', 'So erkennst du eine faire Werkstatt', 'Lack richtig pflegen'],
+    myth: 'Markenwerkstätten sind immer besser',
+    behind: 'was in der Werkstatt mit deinem Auto passiert',
+    transformation: 'Verdrecktes Auto → Showroom-Zustand',
+    hashtags: ['#auto', '#carsoftiktok', '#werkstatt', '#detailing', '#autopflege', '#kfz', '#cars', '#autoliebe', '#tuning', '#vorhernachher'],
   },
   generic: {
     label: 'Business',
@@ -117,6 +195,10 @@ export function detectIndustry(text) {
 
 export function detectGoal(text) {
   const t = text.toLowerCase();
+  if (/(launch|neues produkt|eröffnung|eröffnen|neueröffnung|startet bald|markteinführung)/.test(t)) return 'launch';
+  if (/(mitarbeiter|personal finden|azubi|recruiting|bewerber|fachkräfte|stellen)/.test(t)) return 'recruiting';
+  if (/(laufkundschaft|besucher|gäste|vor ort|in den laden|ins geschäft|reservierung)/.test(t)) return 'local';
+  if (/(engagement|kommentare|interaktion|fans)/.test(t)) return 'community';
   if (/(verk[aä]uf|umsatz|sales|kunden gewinnen|bestellung|shop|conversion|kaufen)/.test(t)) return 'sales';
   if (/(lead|termin|buchung|anfrage|bewerb)/.test(t)) return 'leads';
   if (/(follower|reichweite|bekannt|wachsen|viral|community)/.test(t)) return 'reach';
@@ -129,4 +211,8 @@ export const GOALS = {
   leads: { label: 'Mehr Anfragen', cta: 'Schreib mir „START“ per DM', mix: ['Reichweite', 'Vertrauen', 'Verkauf', 'Reichweite', 'Vertrauen', 'Community', 'Verkauf'] },
   reach: { label: 'Mehr Reichweite', cta: 'Folge für Teil 2', mix: ['Reichweite', 'Reichweite', 'Community', 'Reichweite', 'Vertrauen', 'Reichweite', 'Community'] },
   brand: { label: 'Stärkere Marke', cta: 'Speichern & mit jemandem teilen, der das braucht', mix: ['Vertrauen', 'Reichweite', 'Community', 'Vertrauen', 'Reichweite', 'Vertrauen', 'Verkauf'] },
+  launch: { label: 'Produkt-Launch', cta: 'Folge, um den Launch nicht zu verpassen', mix: [] },
+  local: { label: 'Mehr Besucher vor Ort', cta: 'Komm vorbei – Adresse in der Bio', mix: [] },
+  community: { label: 'Mehr Engagement', cta: 'Schreib deine Meinung in die Kommentare', mix: [] },
+  recruiting: { label: 'Mitarbeiter finden', cta: 'Bewirb dich per DM – ohne Anschreiben', mix: [] },
 };

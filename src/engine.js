@@ -3,9 +3,10 @@
 // fallback when the API is unreachable.
 
 import { INDUSTRIES, GOALS, detectIndustry, detectGoal } from './industries.js';
+import { PLATFORMS, TONES, VIDEO_LENGTHS, CTAS, HASHTAG_COUNTS } from './options.js';
 
 export const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-const SLOTS = { 3: [0, 2, 4], 4: [0, 1, 3, 5], 5: [0, 1, 2, 3, 4], 7: [0, 1, 2, 3, 4, 5, 6] };
+export const SLOTS = { 1: [2], 2: [1, 4], 3: [0, 2, 4], 4: [0, 1, 3, 5], 5: [0, 1, 2, 3, 4], 6: [0, 1, 2, 3, 4, 5], 7: [0, 1, 2, 3, 4, 5, 6] };
 const TIMES = ['07:30', '12:15', '17:45', '18:30', '19:00', '20:15', '21:00'];
 
 export function seededRandom(seed) {
@@ -179,6 +180,10 @@ const GOAL_FORMATS = {
   leads: ['mistakes', 'howto', 'story', 'myth', 'transformation', 'reply', 'offer', 'behind', 'pov', 'product'],
   reach: ['mistakes', 'pov', 'myth', 'transformation', 'howto', 'reply', 'behind', 'story', 'product', 'offer'],
   brand: ['story', 'behind', 'howto', 'myth', 'pov', 'reply', 'transformation', 'mistakes', 'product', 'offer'],
+  launch: ['behind', 'story', 'product', 'pov', 'transformation', 'offer', 'reply', 'mistakes', 'howto', 'myth'],
+  local: ['behind', 'pov', 'product', 'mistakes', 'reply', 'transformation', 'story', 'offer', 'howto', 'myth'],
+  community: ['myth', 'pov', 'reply', 'mistakes', 'story', 'howto', 'behind', 'transformation', 'product', 'offer'],
+  recruiting: ['behind', 'story', 'pov', 'myth', 'reply', 'howto', 'mistakes', 'transformation', 'product', 'offer'],
 };
 
 function guessBrand(description) {
@@ -200,25 +205,55 @@ function rankFormats(goal, analysis) {
     .sort((a, b) => a.score - b.score);
 }
 
-function hashtagsFor(rnd, profile, brand, platformTag) {
-  const pool = [...profile.hashtags];
-  const tags = [];
-  while (tags.length < 6 && pool.length) tags.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0]);
-  if (brand) tags.push('#' + brand.toLowerCase().replace(/[^a-z0-9äöüß]/g, ''));
-  tags.push(platformTag);
-  return tags;
+const GENERIC_TAGS = ['#fyp', '#viral', '#foryou', '#trending', '#tipps', '#deutschland', '#explore', '#lernenmittiktok', '#contentcreator', '#reelsdeutschland'];
+
+function hashtagsFor(rnd, profile, brand, count) {
+  const want = HASHTAG_COUNTS.includes(Number(count)) ? Number(count) : 8;
+  const tags = brand ? ['#' + brand.toLowerCase().replace(/[^a-z0-9äöüß]/g, '')] : [];
+  const pools = [[...profile.hashtags], [...GENERIC_TAGS]];
+  for (const pool of pools) {
+    while (tags.length < want && pool.length) {
+      const tag = pool.splice(Math.floor(rnd() * pool.length), 1)[0];
+      if (!tags.includes(tag)) tags.push(tag);
+    }
+  }
+  return tags.slice(0, want);
 }
 
-function variantsFor(post, c, analysis) {
+const EMOJI_RE = /\s*\p{Extended_Pictographic}️?/gu;
+export const stripEmojis = (text) => text.replace(EMOJI_RE, '').replace(/[ \t]+\n/g, '\n').trim();
+
+// Swap on-camera shots for faceless alternatives (B-roll, hands, screen, product).
+function makeFaceless(script) {
+  return script.map((beat) => /gesicht|in die kamera|blick|reaktion|ich-perspektive/i.test(beat.visual)
+    ? { ...beat, visual: 'B-Roll: Hände, Produkt-Close-up oder Screen-Recording mit großem Text-Overlay (kein Gesicht)' }
+    : beat);
+}
+
+const PLATFORM_TIPS = {
+  TikTok: { adjustment: 'Trend-Sound nutzen, schnelle Schnitte alle 1–2 Sek., Untertitel in TikTok-Schrift.', cta: 'Kommentiere „Teil 2“' },
+  'Instagram Reels': { adjustment: 'Ästhetischere Farbgebung, Cover-Bild fürs Grid gestalten, Caption etwas länger.', cta: null },
+  'YouTube Shorts': { adjustment: 'Mehr Kontext & Erklärung, nahtloser Loop am Ende (letzter Satz führt in den ersten).', cta: 'Abonniere für mehr' },
+};
+
+function variantsFor(post, c, analysis, opts) {
+  const lengths = (VIDEO_LENGTHS[opts.videoLength] || VIDEO_LENGTHS.mix).ranges;
   const median = analysis?.medianDuration;
-  return [
-    { platform: 'TikTok', length: median ? `${Math.max(9, Math.round(median * 0.9))}–${Math.round(median * 1.1)} Sek.` : '15–30 Sek.',
-      onScreenText: post.hooks[0], adjustment: 'Trend-Sound nutzen, schnelle Schnitte alle 1–2 Sek., Untertitel in TikTok-Schrift.', cta: 'Kommentiere „Teil 2“' },
-    { platform: 'Instagram Reels', length: '20–45 Sek.',
-      onScreenText: post.hooks[1], adjustment: 'Ästhetischere Farbgebung, Cover-Bild fürs Grid gestalten, Caption etwas länger.', cta: c.goal.cta },
-    { platform: 'YouTube Shorts', length: '30–58 Sek.',
-      onScreenText: post.hooks[2], adjustment: 'Mehr Kontext & Erklärung, nahtloser Loop am Ende (letzter Satz führt in den ersten).', cta: 'Abonniere für mehr' },
-  ];
+  return opts.platforms.map((platform) => {
+    const i = PLATFORMS.indexOf(platform);
+    let length = lengths[platform];
+    if (platform === 'TikTok' && median && (!opts.videoLength || opts.videoLength === 'mix')) {
+      length = `${Math.max(7, Math.round(median * 0.9))}–${Math.round(median * 1.1)} Sek.`;
+    }
+    const tip = PLATFORM_TIPS[platform];
+    return {
+      platform,
+      length,
+      onScreenText: post.hooks[i % post.hooks.length],
+      adjustment: tip.adjustment + (opts.faceless ? ' Faceless umsetzen: Stimme aus dem Off, Text-Overlays, Detailaufnahmen.' : ''),
+      cta: opts.ctaChosen ? c.goal.cta : tip.cta || c.goal.cta,
+    };
+  });
 }
 
 export function generatePlanOffline(input, analysis = null) {
@@ -226,7 +261,15 @@ export function generatePlanOffline(input, analysis = null) {
   const industryKey = input.industry && INDUSTRIES[input.industry] ? input.industry : detectIndustry(description);
   const goalKey = input.goal && GOALS[input.goal] ? input.goal : detectGoal(description);
   const p = INDUSTRIES[industryKey];
-  const goal = GOALS[goalKey];
+  const cta = CTAS[input.cta]?.text;
+  const goal = { ...GOALS[goalKey], cta: cta || GOALS[goalKey].cta };
+  const tone = TONES[input.tone] || null;
+  const platforms = (Array.isArray(input.platforms) ? input.platforms : []).filter((x) => PLATFORMS.includes(x));
+  const opts = {
+    platforms: platforms.length ? PLATFORMS.filter((x) => platforms.includes(x)) : PLATFORMS,
+    videoLength: input.videoLength,
+    ctaChosen: Boolean(cta),
+  };
   const rnd = seededRandom(`${description}|${input.seed ?? 0}`);
   const brandName = String(input.brand || '').trim() || guessBrand(description);
   const brandForms = brandName
@@ -235,7 +278,9 @@ export function generatePlanOffline(input, analysis = null) {
   const postsPerWeek = SLOTS[input.postsPerWeek] ? Number(input.postsPerWeek) : 7;
   const weeks = Math.min(Math.max(Number(input.weeks) || 1, 1), 4);
 
-  const ranked = rankFormats(goalKey, analysis);
+  const allowed = (Array.isArray(input.formats) ? input.formats : []).filter((f) => FORMATS[f]);
+  let ranked = rankFormats(goalKey, analysis);
+  if (allowed.length) ranked = ranked.filter((r) => allowed.includes(r.id));
   const posts = [];
   const uses = new Map();
   let n = 0;
@@ -248,6 +293,7 @@ export function generatePlanOffline(input, analysis = null) {
       const ctx = { p, goal, ...brandForms, product: p.products[used % p.products.length] };
       const built = fmt.build(ctx);
       const hooks = [...built.hooks];
+      const faceless = input.onCamera === 'faceless' || (input.onCamera === 'mixed' && n % 2 === 1);
       // Remix the strongest niche pattern into the hook set as a fresh variant
       const top = analysis?.patterns?.[0];
       if (top && top.id !== fmt.pattern && top.id === 'pov') hooks[2] = `POV: ${built.title}`;
@@ -259,7 +305,7 @@ export function generatePlanOffline(input, analysis = null) {
         pillar: fmt.pillar,
         title: built.title,
         hooks,
-        script: built.script,
+        script: faceless ? makeFaceless(built.script) : built.script,
         caption: '',
         hashtags: [],
         variants: [],
@@ -267,9 +313,16 @@ export function generatePlanOffline(input, analysis = null) {
         whyItWorks: built.why,
         inspiredBy: pick0.inspiredBy,
       };
-      post.caption = `${hooks[0]}\n\n${pick(rnd, ['Speicher dir das für später 📌', 'Teile das mit jemandem, der das sehen muss 👀', 'Was meinst du? 👇'])}\n\n👉 ${goal.cta}`;
-      post.hashtags = hashtagsFor(rnd, p, brandName, pick(rnd, ['#fyp', '#viral', '#foryou', '#reels']));
-      post.variants = variantsFor(post, ctx, analysis);
+      const closers = tone ? tone.closers : ['Speicher dir das für später 📌', 'Teile das mit jemandem, der das sehen muss 👀', 'Was meinst du? 👇'];
+      const lead = input.emojis === 'viele' ? `${pick(rnd, ['🔥', '✨', '🚀', '😍', '👀'])} ` : '';
+      post.caption = `${lead}${hooks[0]}\n\n${pick(rnd, closers)}\n\n👉 ${goal.cta}`;
+      if (input.emojis === 'keine') {
+        post.caption = stripEmojis(post.caption);
+        post.hooks = post.hooks.map(stripEmojis);
+        post.script = post.script.map((b) => ({ ...b, voiceover: stripEmojis(b.voiceover) }));
+      }
+      post.hashtags = hashtagsFor(rnd, p, brandName, input.hashtagCount);
+      post.variants = variantsFor(post, ctx, analysis, { ...opts, faceless });
       posts.push(post);
       n++;
     }
@@ -278,8 +331,9 @@ export function generatePlanOffline(input, analysis = null) {
   const pillars = [...new Set(posts.map((x) => x.pillar))];
   return {
     summary: `Strategie für ${p.label} mit Ziel „${goal.label}“: Reichweiten-Formate holen neue Zuschauer, Vertrauens-Formate machen aus ihnen Fans, und gezielte Verkaufs-Posts wandeln sie in Kunden um.` +
+      (tone ? ` Tonalität: ${tone.label}.` : '') +
       (analysis ? ` Die Formate basieren auf den ${analysis.videoCount} analysierten Nischen-Videos – stärkstes Muster: ${analysis.patterns[0].label}.` : ''),
-    audience: p.audience,
+    audience: String(input.audience || '').trim() || p.audience,
     contentPillars: pillars,
     posts,
     meta: { engine: 'offline', industry: industryKey, goal: goalKey },

@@ -143,3 +143,16 @@ test('store falls back to memory when the data dir is not writable', () => {
   store.recordGeneration(user);
   assert.equal(store.getUser('u1').generations, 1);
 });
+
+test('options catalog and option validation', async () => {
+  const call = client();
+  const opts = await call('/api/options');
+  assert.ok(opts.body.industries.length >= 13);
+  assert.ok(opts.body.goals.some((g) => g.value === 'recruiting'));
+  assert.deepEqual(opts.body.postsPerWeek, [1, 2, 3, 4, 5, 6, 7]);
+  const bad = await call('/api/generate', { method: 'POST', body: { description: 'Ich habe eine Modemarke', platforms: ['MySpace'] } });
+  assert.equal(bad.status, 400);
+  const ok = await call('/api/generate', { method: 'POST', body: { description: 'Ich habe eine Modemarke', platforms: ['TikTok'], tone: 'humorvoll', hashtagCount: 5 } });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.body.plan.posts[0].variants.length, 1);
+});

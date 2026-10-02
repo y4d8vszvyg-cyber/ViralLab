@@ -37,28 +37,35 @@
       </div>
 
       <div class="grid">
+        <label>Branche<select name="industry" data-options="industries" data-auto="Automatisch"></select></label>
+        <label>Ziel<select name="goal" data-options="goals" data-auto="Automatisch"></select></label>
+        <label>Posts pro Woche<select name="postsPerWeek" data-options="postsPerWeek" data-default="7"></select></label>
+        <label>Zeitraum<select name="weeks" data-options="weeks" data-default="1"></select></label>
         <label>Markenname <small>(optional)</small><input name="brand" maxlength="60" placeholder="z.B. NORDWERK"></label>
-        <label>Ziel
-          <select name="goal">
-            <option value="">Automatisch erkennen</option>
-            <option value="sales">💸 Mehr Verkäufe</option>
-            <option value="leads">📩 Mehr Anfragen / Leads</option>
-            <option value="reach">🚀 Mehr Reichweite</option>
-            <option value="brand">💎 Stärkere Marke</option>
-          </select>
-        </label>
-        <label>Posts pro Woche
-          <select name="postsPerWeek">
-            <option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="7" selected>7 (täglich)</option>
-          </select>
-        </label>
-        <label>Zeitraum
-          <select name="weeks">
-            <option value="1" selected>1 Woche</option><option value="2">2 Wochen</option><option value="4">4 Wochen</option>
-          </select>
-        </label>
-        <label class="wide">Tonalität <small>(optional)</small><input name="tone" maxlength="80" placeholder="z.B. frech & direkt, edel, humorvoll"></label>
+        <label class="span3">Zielgruppe <small>(optional)</small><input name="audience" maxlength="200" placeholder="z.B. Frauen 25–40, die nachhaltig einkaufen"></label>
       </div>
+
+      <details id="moreOptions" class="more">
+        <summary>⚙️ Mehr Optionen <small id="optionsSummary"></small></summary>
+        <div class="opt-section">
+          <span class="opt-label">Plattformen</span>
+          <div class="chips" data-chips="platforms" data-name="platforms" data-all="true"></div>
+        </div>
+        <div class="grid">
+          <label>Tonalität<select name="tone" data-options="tones" data-auto="Passend zur Marke"></select></label>
+          <label>Videolänge<select name="videoLength" data-options="videoLengths" data-default="mix"></select></label>
+          <label>Vor der Kamera<select name="onCamera" data-options="onCamera" data-default="face"></select></label>
+          <label>Call-to-Action<select name="cta" data-options="ctas" data-auto="Passend zum Ziel"></select></label>
+          <label>Emojis<select name="emojis" data-options="emojis" data-default="wenige"></select></label>
+          <label>Hashtags pro Post<select name="hashtagCount" data-options="hashtagCounts" data-default="8"></select></label>
+          <label class="span2">Eigene Tonalitäts-Wünsche <small>(optional)</small><input name="toneCustom" maxlength="120" placeholder="z.B. Jugendsprache, Berliner Schnauze, viele Fragen"></label>
+        </div>
+        <div class="opt-section">
+          <span class="opt-label">Formate <button type="button" class="btn link small" id="formatsAll">Alle</button><button type="button" class="btn link small" id="formatsNone">Keine</button></span>
+          <div class="chips" data-chips="formats" data-name="formats" data-all="true"></div>
+        </div>
+        <button type="button" class="btn link small" id="resetOptions">Auf Standard zurücksetzen</button>
+      </details>
 
       <details id="niche" class="niche">
         <summary><span class="badge">Nischen-Lab</span> Erfolgreiche Videos deiner Nische analysieren <small>– ViralLab entwickelt daraus eigene Konzepte</small></summary>
