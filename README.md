@@ -69,8 +69,9 @@ ViralLab
 | **10 Generierungen** | **9,99 €/Monat**, unbegrenzt |
 
 - Nutzer werden über ein signiertes, anonymes Cookie erkannt, eine Registrierung ist nicht nötig.
-- Ist `STRIPE_SECRET_KEY` gesetzt, läuft Pro über ein **Stripe-Checkout-Abo**. Dazu gehören ein Webhook für Abschluss und Kündigung und das Kundenportal.
-- Ohne Stripe läuft der **Demo-Modus**: Pro wird 30 Tage lang kostenlos freigeschaltet, so lässt sich der Ablauf lokal testen.
+- **Stripe Payment Link (Standard):** „Zahlungspflichtig abonnieren“ führt zum Zahlungslink (`STRIPE_PAYMENT_LINK`, im Code ist ein Test-Link hinterlegt). Die App hängt die Nutzer-ID als `client_reference_id` an. Nach der Zahlung schaltet der Webhook `checkout.session.completed` Pro frei. Ein API-Schlüssel ist dafür nicht nötig.
+- **Stripe Checkout über die API:** Setz `STRIPE_PAYMENT_LINK=` leer und `STRIPE_SECRET_KEY`. Dann erzeugt die App die Checkout-Seite selbst. Kündigungen über den Kündigungsbutton laufen damit vollautomatisch.
+- **Demo-Modus:** Ohne Link und ohne Schlüssel wird Pro 30 Tage kostenlos freigeschaltet. So lässt sich der Ablauf lokal testen.
 
 ## Schnellstart
 
@@ -86,6 +87,14 @@ npm start               # http://localhost:3000
 Für Umgebungsvariablen mit Node 20+: `node --env-file=.env server.js`
 
 ### Stripe einrichten
+
+**Mit Payment Link** (einfachste Variante):
+1. In Stripe den Zahlungslink öffnen → **Nach der Zahlung** → „Kunden auf eure Website weiterleiten“ → `https://<deine-domain>/?checkout=pending`
+2. **Webhook** anlegen: `https://<deine-domain>/api/billing/webhook` mit den Events `checkout.session.completed` und `customer.subscription.deleted`. Das Secret als `STRIPE_WEBHOOK_SECRET` setzen. **Ohne Webhook wird Pro nach der Zahlung nicht freigeschaltet.**
+3. Optional das No-Code-Kundenportal aktivieren (Einstellungen → Billing → Kundenportal) und den Login-Link als `STRIPE_PORTAL_URL` setzen.
+4. Für echte Zahlungen den Live-Link als `STRIPE_PAYMENT_LINK` eintragen. Kündigungen über den Kündigungsbutton musst du in diesem Modus im Stripe-Dashboard ausführen, du bekommst sie per Log bzw. E-Mail. Mit zusätzlichem `STRIPE_SECRET_KEY` passiert das automatisch.
+
+**Mit API-Checkout:**
 
 1. `STRIPE_SECRET_KEY` setzen. Optional `STRIPE_PRICE_ID` für einen festen 9,99-€-Monatspreis, sonst wird der Preis inline angelegt.
 2. Einen Webhook auf `https://<deine-domain>/api/billing/webhook` mit den Events `checkout.session.completed` und `customer.subscription.deleted` anlegen und das Secret als `STRIPE_WEBHOOK_SECRET` setzen.

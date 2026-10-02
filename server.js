@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { createStore, FREE_LIMIT } from './src/store.js';
 import { analyzeNiche } from './src/analyzer.js';
 import { generatePlan, aiEnabled } from './src/ai.js';
-import { stripeEnabled, createCheckoutSession, retrieveCheckoutSession, createPortalSession, verifyWebhook, findActiveSubscriptions, cancelAtPeriodEnd, PRO_PRICE_CENTS } from './src/billing.js';
+import { stripeEnabled, billingMode, paymentLinkUrl, createCheckoutSession, retrieveCheckoutSession, createPortalSession, verifyWebhook, findActiveSubscriptions, cancelAtPeriodEnd, PRO_PRICE_CENTS } from './src/billing.js';
 import { renderLegalPage, renderCancelPage } from './src/legal.js';
 import { optionCatalog } from './src/catalog.js';
 import { INDUSTRIES, GOALS } from './src/industries.js';
@@ -62,7 +62,8 @@ export function createApp({ store = createStore(path.join(DATA_DIR, 'db.json')),
   app.disable('x-powered-by');
 
   app.get('/healthz', (req, res) => res.json({ ok: true }));
-  const allowDemoUpgrade = !stripeEnabled() && process.env.ALLOW_DEMO_UPGRADE !== 'false';
+  const allowDemoUpgrade = () => billingMode() === 'demo' && process.env.ALLOW_DEMO_UPGRADE !== 'false';
+  const portalUrl = () => process.env.STRIPE_PORTAL_URL || '';
   const inFlight = new Set();
 
   // Stripe webhooks need the raw body for signature verification.
@@ -99,8 +100,11 @@ export function createApp({ store = createStore(path.join(DATA_DIR, 'db.json')),
   app.get('/api/me', (req, res) => {
     res.json({
       quota: store.quota(req.user),
-      features: { ai: aiEnabled(), stripe: stripeEnabled(), demoUpgrade: allowDemoUpgrade },
-      billing: { manageable: stripeEnabled() && Boolean(req.user.stripeCustomerId) },
+      features: { ai: aiEnabled(), stripe: billingMode() !== 'demo', demoUpgrade: allowDemoUpgrade() },
+      billing: {
+        mode: billingMode(),
+        manageable: (stripeEnabled() && Boolean(req.user.stripeCustomerId)) || (Boolean(portalUrl()) && store.isPro(req.user)),
+      },
       pricing: { freeGenerations: FREE_LIMIT, proMonthlyEur: PRO_PRICE_CENTS / 100 },
     });
   });
@@ -151,7 +155,8 @@ export function createApp({ store = createStore(path.join(DATA_DIR, 'db.json')),
     if (req.body?.consent !== true) {
       return res.status(400).json({ error: 'Bitte bestätige die AGB und den sofortigen Leistungsbeginn.' });
     }
-    if (stripeEnabled()) {
+    if (billingMode() === 'link') return res.json({ url: paymentLinkUrl(req.user) });
+    if (billingMode() === 'api') {
       try {
         const session = await createCheckoutSession(req.user, baseUrl(req));
         return res.json({ url: session.url });
@@ -160,12 +165,14 @@ export function createApp({ store = createStore(path.join(DATA_DIR, 'db.json')),
         return res.status(502).json({ error: 'Checkout konnte nicht gestartet werden.' });
       }
     }
-    if (!allowDemoUpgrade) return res.status(503).json({ error: 'Zahlungen sind nicht konfiguriert.' });
+    if (!allowDemoUpgrade()) return res.status(503).json({ error: 'Zahlungen sind nicht konfiguriert.' });
     store.setPro(req.user, { until: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString() });
     res.json({ demo: true, quota: store.quota(req.user) });
   });
 
   app.get('/api/billing/success', async (req, res) => {
+    // Without an API key the session can't be verified here; the webhook activates Pro.
+    if (!stripeEnabled()) return res.redirect('/?checkout=pending');
     try {
       const session = await retrieveCheckoutSession(String(req.query.session_id || ''));
       if (session.client_reference_id === req.user.id && ['paid', 'no_payment_required'].includes(session.payment_status)) {
@@ -179,6 +186,9 @@ export function createApp({ store = createStore(path.join(DATA_DIR, 'db.json')),
   });
 
   app.post('/api/billing/portal', async (req, res) => {
+    if (portalUrl() && !(stripeEnabled() && req.user.stripeCustomerId)) {
+      return store.isPro(req.user) ? res.json({ url: portalUrl() }) : res.status(400).json({ error: 'Kein aktives Abo gefunden.' });
+    }
     if (!stripeEnabled() || !req.user.stripeCustomerId) return res.status(400).json({ error: 'Kein aktives Abo gefunden.' });
     try {
       const session = await createPortalSession(req.user, baseUrl(req));
@@ -204,6 +214,11 @@ export function createApp({ store = createStore(path.join(DATA_DIR, 'db.json')),
           : await findActiveSubscriptions({ customerId: user.stripeCustomerId, email: input.email });
         for (const sub of subs) periodEnd = (await cancelAtPeriodEnd(sub.id)) || periodEnd;
         if (subs.length) stripeStatus = 'gekuendigt';
+      } else if (billingMode() === 'link') {
+        // No API key: the operator cancels in the Stripe dashboard; the
+        // customer.subscription.deleted webhook then ends Pro.
+        stripeStatus = 'manuell_in_stripe_kuendigen';
+        console.warn(`[cancel] Bitte Abo im Stripe-Dashboard kündigen: ${input.email} (Nutzer ${user.id})`);
       } else if (store.isPro(user)) {
         store.setFree(user);
         stripeStatus = 'demo_beendet';
@@ -247,7 +262,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   app.listen(port, () => {
     console.log(`🚀 ViralLab läuft auf http://localhost:${port}`);
     console.log(`   KI: ${aiEnabled() ? 'Claude aktiv' : 'Offline-Engine (ANTHROPIC_API_KEY setzen für Claude)'}`);
-    console.log(`   Zahlungen: ${stripeEnabled() ? 'Stripe aktiv' : 'Demo-Modus'}`);
+    console.log(`   Zahlungen: ${{ link: 'Stripe Payment Link', api: 'Stripe Checkout (API)', demo: 'Demo-Modus' }[billingMode()]}`);
+    if (billingMode() !== 'demo' && !process.env.STRIPE_WEBHOOK_SECRET) {
+      console.warn('   ⚠️  STRIPE_WEBHOOK_SECRET fehlt – bezahlte Abos werden nicht automatisch freigeschaltet!');
+    }
   });
   for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { store.flush(); process.exit(0); });
 }

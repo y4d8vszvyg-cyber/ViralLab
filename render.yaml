@@ -21,6 +21,10 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      - key: STRIPE_PAYMENT_LINK
+        sync: false
+      - key: STRIPE_PORTAL_URL
+        sync: false
       - key: PUBLIC_URL
         sync: false
       - key: LEGAL_NAME

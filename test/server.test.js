@@ -11,6 +11,7 @@ import { verifyWebhook } from '../src/billing.js';
 
 delete process.env.ANTHROPIC_API_KEY;
 delete process.env.STRIPE_SECRET_KEY;
+process.env.STRIPE_PAYMENT_LINK = ''; // demo mode unless a test opts in
 
 let server, base;
 before(async () => {
@@ -155,4 +156,37 @@ test('options catalog and option validation', async () => {
   const ok = await call('/api/generate', { method: 'POST', body: { description: 'Ich habe eine Modemarke', platforms: ['TikTok'], tone: 'humorvoll', hashtagCount: 5 } });
   assert.equal(ok.status, 200);
   assert.equal(ok.body.plan.posts[0].variants.length, 1);
+});
+
+test('payment link checkout: link carries user id, webhook activates Pro, cancel does not downgrade locally', async () => {
+  process.env.STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/test_abc';
+  process.env.STRIPE_WEBHOOK_SECRET = 'whsec_link';
+  try {
+    const call = client();
+    const me = await call('/api/me');
+    assert.equal(me.body.billing.mode, 'link');
+    assert.equal(me.body.features.demoUpgrade, false);
+    const checkout = await call('/api/billing/checkout', { method: 'POST', body: { consent: true } });
+    const url = new URL(checkout.body.url);
+    assert.equal(url.origin + url.pathname, 'https://buy.stripe.com/test_abc');
+    const userId = url.searchParams.get('client_reference_id');
+    assert.match(userId, /^[0-9a-f-]{36}$/);
+
+    const body = JSON.stringify({ type: 'checkout.session.completed', data: { object: { client_reference_id: userId, customer: 'cus_1', subscription: 'sub_1', payment_status: 'paid' } } });
+    const t = Math.floor(Date.now() / 1000);
+    const sig = crypto.createHmac('sha256', 'whsec_link').update(`${t}.${body}`).digest('hex');
+    const hook = await fetch(base + '/api/billing/webhook', { method: 'POST', headers: { 'content-type': 'application/json', 'stripe-signature': `t=${t},v1=${sig}` }, body });
+    assert.equal(hook.status, 200);
+    assert.equal((await call('/api/me')).body.quota.tier, 'pro');
+
+    const cancel = await call('/api/cancel', { method: 'POST', body: { name: 'Max Muster', email: 'max@example.de' } });
+    assert.equal(cancel.status, 200);
+    assert.equal((await call('/api/me')).body.quota.tier, 'pro'); // ends via Stripe webhook at period end
+
+    const success = await fetch(base + '/api/billing/success?session_id=cs_test', { redirect: 'manual' });
+    assert.equal(success.headers.get('location'), '/?checkout=pending');
+  } finally {
+    process.env.STRIPE_PAYMENT_LINK = '';
+    delete process.env.STRIPE_WEBHOOK_SECRET;
+  }
 });

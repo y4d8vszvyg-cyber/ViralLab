@@ -380,6 +380,20 @@ $('#historyList').addEventListener('click', async (e) => {
 const params = new URLSearchParams(location.search);
 if (params.get('checkout') === 'success') toast('Willkommen bei Pro ⚡');
 if (params.get('checkout') === 'failed') toast('Zahlung konnte nicht bestätigt werden.');
+if (params.get('checkout') === 'pending') waitForPro();
+
+// After a Payment Link checkout the webhook activates Pro a few seconds later.
+async function waitForPro(tries = 15) {
+  toast('Zahlung eingegangen – Pro wird freigeschaltet …');
+  for (let i = 0; i < tries; i++) {
+    await new Promise((r) => setTimeout(r, 2000));
+    try {
+      const me = await api('/api/me');
+      if (me.quota.tier === 'pro') { await loadMe(); toast('Willkommen bei Pro ⚡'); return; }
+    } catch {}
+  }
+  toast('Pro ist noch nicht aktiv. Lade die Seite in einer Minute neu oder schreib uns.');
+}
 if (params.has('checkout')) history.replaceState(null, '', '/');
 loadMe().catch(() => toast('Server nicht erreichbar'));
 initOptions().catch(() => toast('Optionen konnten nicht geladen werden'));

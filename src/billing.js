@@ -7,8 +7,36 @@ import crypto from 'node:crypto';
 const STRIPE_API = 'https://api.stripe.com/v1';
 export const PRO_PRICE_CENTS = 999;
 
+// Stripe Payment Link for ViralLab Pro (test mode). Override with STRIPE_PAYMENT_LINK
+// (e.g. the live link); set it to an empty string to disable payment-link checkout.
+export const DEFAULT_PAYMENT_LINK = 'https://buy.stripe.com/test_3cI5kFa249dGchh1RFawo00';
+
+/** True when the Stripe API can be called (secret key configured). */
 export function stripeEnabled() {
   return Boolean(process.env.STRIPE_SECRET_KEY);
+}
+
+export function paymentLink() {
+  return (process.env.STRIPE_PAYMENT_LINK ?? DEFAULT_PAYMENT_LINK).trim();
+}
+
+/**
+ * How Pro is sold:
+ * - 'link': hosted Stripe Payment Link (activated via webhook)
+ * - 'api':  Checkout Session created through the Stripe API
+ * - 'demo': no payments configured, Pro is unlocked for free
+ */
+export function billingMode() {
+  if (paymentLink()) return 'link';
+  if (stripeEnabled()) return 'api';
+  return 'demo';
+}
+
+/** Payment Link URL carrying the user id, so the webhook can assign the payment. */
+export function paymentLinkUrl(user) {
+  const url = new URL(paymentLink());
+  url.searchParams.set('client_reference_id', user.id);
+  return url.toString();
 }
 
 function form(obj, prefix = '', out = new URLSearchParams()) {
